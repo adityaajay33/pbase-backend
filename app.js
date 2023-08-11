@@ -4,7 +4,9 @@ import router from "./routes/user-routes";
 import portfolioRouter from "./routes/portfolio-routes";
 import dotenv from "dotenv";
 import cors from "cors";
-import {auth} from "./auth";
+import { auth } from "./auth";
+import multer from "multer"
+import { MongoClient } from "mongodb"
 
 const app = express();
 
@@ -15,8 +17,8 @@ app.use("/api/portfolios", portfolioRouter);
 
 dotenv.config();
 
-console.log(process.env.DATABASE_URL);
-console.log(process.env.PORT);
+const storage = multer.memoryStorage(); // Store files in memory as buffers
+const upload = multer({ storage: storage });
 
 mongoose.connect(process.env.DATABASE_URL).then(()=>app.listen(5000)).then(()=>console.log("Connected.")).catch((err)=>console.log(err));
 

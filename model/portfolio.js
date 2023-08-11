@@ -3,25 +3,17 @@ import mongoose from "mongoose";
 const Schema = mongoose.Schema;
 
 const portfolioSchema = new Schema({
-    softwareUsed:{
-        type: String,
-        required: false,
+    image: {
+        fileId: {
+            type: mongoose.Types.ObjectId,
+            required: true,
+        },
+        filename: String,
+        contentType: String,
     },
-    description:{
-        type: String,
-        required: true,
-    },    
-    careerOutcomes:{
-        type: String,
-        required: true,
-    },
-    image:{
-        type: String,
-        required: true,
-    },
-    user:{
-        type:mongoose.Types.ObjectId,
-        ref:"User",
+    user: {
+        type: mongoose.Types.ObjectId,
+        ref: "User",
         required: true,
     }
 });

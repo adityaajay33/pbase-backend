@@ -1,6 +1,8 @@
 import Portfolio from "../model/portfolio";
 import User from "../model/User";
 import mongoose from "mongoose";
+import { GridFSBucket, MongoClient } from "mongodb";
+import multer from "multer";
 
 export const getAllPortfolios = async(req, res, next) =>{
     let portfolios;
@@ -15,50 +17,69 @@ export const getAllPortfolios = async(req, res, next) =>{
     return res.status(200).json({portfolios});
 }
 
-export const postPortfolio = async(req, res, next) =>{
-    const {softwareUsed, description, careerOutcomes, image, user} = req.body;
+export const postPortfolio = async (req, res, next) => {
+    const {user} = req.body.user;
+    console.log(user);
+    const { originalname, mimetype, buffer } = req.file; // Added to handle uploaded image
+    console.log(originalname, mimetype, buffer);
 
     let existingUser;
-    try{
+    try {
         existingUser = await User.findById(user);
-    }
-    catch(err){
-        return console.log(err);
-    }
-    if (!existingUser){
-
-        return res.status(404).json({message:"Could not find the desired user."})
+    } catch (err) {
+        return res.status(500).json({ message: "Error fetching user data" });
     }
 
+    if (!existingUser) {
+        return res.status(404).json({ message: "Could not find the desired user." });
+    }
 
-    const portfolioShare = new Portfolio({
-        softwareUsed, 
-        description, 
-        careerOutcomes, 
-        image, 
-        user
+    // Connect to MongoDB and create GridFSBucket
+    const mongoClient = MongoClient(mongoose.connection.db);
+    const gridFSBucket = new GridFSBucket(mongoClient, { bucketName: "images" });
+
+    // Create an upload stream to GridFS
+    const uploadStream = gridFSBucket.openUploadStream(originalname, {
+        contentType: mimetype,
     });
 
-    try{
+    // Pipe the image buffer to the upload stream
+    buffer.pipe(uploadStream);
+
+    try {
         const session = await mongoose.startSession();
         session.startTransaction();
-        await portfolioShare.save({session});
-        existingUser.portfolioProp = portfolioShare;
-        await existingUser.save({session});
-        await session.commitTransaction();
-    }
-    catch(err){
-        console.log(err);
-        return res.status(500).json({message: "There is an error with the system."});
-    }
 
-    try{
-        await portfolioShare.save()
+        // Wait for the upload to complete
+        uploadStream.on("finish", async () => {
+            const portfolioShare = new Portfolio({
+                user,
+                file: {
+                    fileId: uploadStream.id, // Store the fileId
+                    filename: originalname,
+                    contentType: mimetype,
+                },
+            });
+
+            try {
+                await portfolioShare.save({ session });
+                existingUser.portfolioProp = portfolioShare;
+                await existingUser.save({ session });
+                await session.commitTransaction();
+                session.endSession();
+
+                return res.status(200).json({ portfolioShare });
+            } catch (err) {
+                console.log(err);
+                await session.abortTransaction();
+                session.endSession();
+                return res.status(500).json({ message: "Error saving portfolio and user data" });
+            }
+        });
+    } catch (err) {
+        console.log(err);
+        return res.status(500).json({ message: "Error uploading image" });
     }
-    catch(err){
-        return console.log(err)
-    }
-    return res.status(200).json({portfolioShare});
 };
 
 export const updatePortfolio = async(req, res, next) =>{
@@ -68,7 +89,7 @@ export const updatePortfolio = async(req, res, next) =>{
 
     let portfolioUpdated;
     try{
-        portfolioUpdated = await Portfolio.findByIdAndUpdate(portId, {softwareUsed, description, careerOutcomes, image});
+        portfolioUpdated = await Portfolio.findByIdAndUpdate(portId, { image });
     }
     catch(err){
         console.log(err);

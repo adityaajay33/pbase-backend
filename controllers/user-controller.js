@@ -76,3 +76,20 @@ export const login = async(req, res, next) =>{
 
     return res.status(200).json({message: "Login successful.", token});
 }
+
+export const getByUserID = async(req, res, next)=>{
+
+    const userID = req.params.id;
+
+    let userLink;
+    try{
+        userLink = await User.findById(userID);
+    }
+    catch(err){
+        return console.log(err);
+    }
+    if(!userLink){
+        return res.status(404).json({message: "The portfolio that you are looking for does not exist."});
+    }
+    return res.status(200).json({userLink});
+}
