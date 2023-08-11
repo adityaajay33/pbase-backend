@@ -3,7 +3,7 @@ import mongoose from "mongoose";
 const Schema = mongoose.Schema;
 
 const portfolioSchema = new Schema({
-    image: {
+    file: {
         fileId: {
             type: mongoose.Types.ObjectId,
             required: true,

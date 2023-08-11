@@ -20,7 +20,17 @@ dotenv.config();
 const storage = multer.memoryStorage(); // Store files in memory as buffers
 const upload = multer({ storage: storage });
 
-mongoose.connect(process.env.DATABASE_URL).then(()=>app.listen(5000)).then(()=>console.log("Connected.")).catch((err)=>console.log(err));
+
+mongoose.connect(process.env.DATABASE_URL, {
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
+}).then(()=>app.listen(5000)).then(()=>console.log("Connected.")).catch((err)=>console.log(err));
+
+export const db = mongoose.connection;
+db.on('error', console.error.bind(console, 'MongoDB connection error:'));
+db.once('open', () => {
+  console.log('Connected to MongoDB');
+});
 
 app.use((req, res, next) => {
     res.setHeader("Access-Control-Allow-Origin", "*");

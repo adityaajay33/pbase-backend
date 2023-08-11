@@ -3,6 +3,10 @@ import User from "../model/User";
 import mongoose from "mongoose";
 import { GridFSBucket, MongoClient } from "mongodb";
 import multer from "multer";
+import { db } from "../app";
+import dotenv from "dotenv";
+
+dotenv.config();
 
 export const getAllPortfolios = async(req, res, next) =>{
     let portfolios;
@@ -18,7 +22,7 @@ export const getAllPortfolios = async(req, res, next) =>{
 }
 
 export const postPortfolio = async (req, res, next) => {
-    const {user} = req.body.user;
+    const {user} = req.body;
     console.log(user);
     const { originalname, mimetype, buffer } = req.file; // Added to handle uploaded image
     console.log(originalname, mimetype, buffer);
@@ -35,16 +39,16 @@ export const postPortfolio = async (req, res, next) => {
     }
 
     // Connect to MongoDB and create GridFSBucket
-    const mongoClient = MongoClient(mongoose.connection.db);
-    const gridFSBucket = new GridFSBucket(mongoClient, { bucketName: "images" });
 
+    const mongoClient = new MongoClient(process.env.DATABASE_URL);
+    const gridFSBucket = new GridFSBucket(db.db, { bucketName: "images" });
     // Create an upload stream to GridFS
     const uploadStream = gridFSBucket.openUploadStream(originalname, {
         contentType: mimetype,
     });
 
     // Pipe the image buffer to the upload stream
-    buffer.pipe(uploadStream);
+    uploadStream.end(buffer);
 
     try {
         const session = await mongoose.startSession();
