@@ -1,12 +1,15 @@
 import Portfolio from "../model/portfolio";
 import User from "../model/User";
 import mongoose from "mongoose";
-import { GridFSBucket, MongoClient } from "mongodb";
+import { GridFSBucket, MongoClient, ObjectId } from "mongodb";
 import multer from "multer";
 import { db } from "../app";
 import dotenv from "dotenv";
+import { Readable, Writable } from "stream";
 
 dotenv.config();
+
+const client = new MongoClient(process.env.DATABASE_URL, { useNewUrlParser: true, useUnifiedTopology: true });
 
 export const getAllPortfolios = async(req, res, next) =>{
     let portfolios;
@@ -86,6 +89,8 @@ export const postPortfolio = async (req, res, next) => {
     }
 };
 
+
+
 export const updatePortfolio = async(req, res, next) =>{
 
     const {softwareUsed, description, careerOutcomes, image} = req.body;
@@ -138,3 +143,19 @@ export const deletePortfolio = async(req, res, next) =>{
     }
     return res.status(200).json({message: "Deleted the portfolio at this location."})
 }
+
+
+export const getImageByID = async (req, res, next) => {
+    const imageID = req.params.id;
+
+    const gridFSBucket = new GridFSBucket(db.db, { bucketName: "images" });
+
+    try {
+        const downloadStream = gridFSBucket.openDownloadStream(new ObjectId(imageID));
+        res.set("Content-Type", "image/jpeg"); // Set the appropriate content type
+        downloadStream.pipe(res);
+    } catch (err) {
+        console.log(err);
+        return res.status(404).json({ message: "Image not found" });
+    }
+};
