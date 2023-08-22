@@ -25,11 +25,11 @@ const userSchema = new Schema({
         required: true,
         minlength: 8
     },
-    portfolioProp:
+    portfolioProp:[
     {
         type: mongoose.Types.ObjectId,
         ref: "Portfolio",
         required: false
-    }
+    }], 
 });
 export default mongoose.model("User", userSchema);

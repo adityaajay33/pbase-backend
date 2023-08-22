@@ -70,12 +70,13 @@ export const postPortfolio = async (req, res, next) => {
 
             try {
                 await portfolioShare.save({ session });
-                existingUser.portfolioProp = portfolioShare;
+                existingUser.portfolioProp.push(portfolioShare);
                 await existingUser.save({ session });
                 await session.commitTransaction();
+                
                 session.endSession();
-
-                return res.status(200).json({ portfolioShare });
+                return res.status(200).json({ fileId: portfolioShare.file.fileId });
+                
             } catch (err) {
                 console.log(err);
                 await session.abortTransaction();
@@ -133,7 +134,9 @@ export const deletePortfolio = async(req, res, next) =>{
 
     let portfolioDeletion;
     try{
-        portfolioDeletion = await Portfolio.findByIdAndDelete(portfolioID)
+        portfolioDeletion = await Portfolio.findByIdAndRemove(portfolioID).populate("user");
+        await portfolioDeletion.user.portfolioProp.pull(portfolioDeletion);
+        await portfolioDeletion.user.save();
     }
     catch(err){
         console.log(err);
@@ -159,3 +162,4 @@ export const getImageByID = async (req, res, next) => {
         return res.status(404).json({ message: "Image not found" });
     }
 };
+
